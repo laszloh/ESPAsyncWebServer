@@ -8,11 +8,13 @@
 #include <lwip/tcpbase.h>
 
 #include <algorithm>
+#include <any>
 #include <deque>
 #include <functional>
 #include <list>
 #include <memory>
 #include <tuple>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -274,7 +276,7 @@ private:
   std::list<String> _pathParams;
 #endif
 
-  std::unordered_map<const char *, String, std::hash<const char *>, std::equal_to<const char *>> _attributes;
+  std::unordered_map<const char *, std::any, std::hash<const char *>, std::equal_to<const char *>> _attributes;
 
   uint8_t _multiParseState;
   uint8_t _boundaryPosition;
@@ -738,31 +740,57 @@ public:
 
   // REQUEST ATTRIBUTES
 
-  void setAttribute(const char *name, const char *value) {
+  void setAttribute(const char* name, std::any &value) {
     _attributes[name] = value;
   }
-  void setAttribute(const char *name, bool value) {
-    _attributes[name] = value ? "1" : emptyString;
+  void setAttribute(const char* name, std::any &&value) {
+    _attributes.emplace(name, std::move(value));
   }
-  void setAttribute(const char *name, long value) {
-    _attributes[name] = String(value);
+
+  template<typename T, class ...Args>
+  void setAttribute(const char *name, Args&&... args) {
+    _attributes.emplace(name, std::make_any<T>(std::in_place_type<T>, std::forward<Args>(args)...));
   }
-  void setAttribute(const char *name, float value, unsigned int decimalPlaces = 2) {
-    _attributes[name] = String(value, decimalPlaces);
+
+  template<typename T> 
+  void setAttribute(const char *name, T &value) {
+    _attributes[name] = value;
   }
-  void setAttribute(const char *name, double value, unsigned int decimalPlaces = 2) {
-    _attributes[name] = String(value, decimalPlaces);
+
+  template<typename T> 
+  void setAttribute(const char *name, T &&value) {
+    _attributes.emplace(name, std::move(value));
   }
 
   bool hasAttribute(const char *name) const {
     return _attributes.find(name) != _attributes.end();
   }
 
-  const String &getAttribute(const char *name, const String &defaultValue = emptyString) const;
-  bool getAttribute(const char *name, bool defaultValue) const;
-  long getAttribute(const char *name, long defaultValue) const;
-  float getAttribute(const char *name, float defaultValue) const;
-  double getAttribute(const char *name, double defaultValue) const;
+  template<typename T>
+  const T &getAttribute(const char *name, T defaultValue = {}) const {
+    auto it = _attributes.find(name);
+    return (it != _attributes.end()) ? std::any_cast<const T&>(it->second) : defaultValue;
+  }
+  template<typename T>
+  T &getAttribute(const char *name, T defaultValue = {}) {
+    auto it = _attributes.find(name);
+    return (it != _attributes.end()) ? std::any_cast<T&>(it->second) : defaultValue;
+  }
+
+  template<typename T, std::enable_if<std::is_standard_layout<T>::value, bool> = true>
+  T getAttribute(const char *name, T defaultValue = 0) const {
+    auto it = _attributes.find(name);
+    return (it != _attributes.end()) ? static_cast<T>(it->second) : defaultValue;
+  }
+
+  const std::any &getAttribute(const char *name, std::any defaultValue = {} ) const {
+    auto it = _attributes.find(name);
+    return (it != _attributes.end()) ? it->second : defaultValue;
+  }
+  std::any &getAttribute(const char *name, std::any defaultValue = {} ) {
+    auto it = _attributes.find(name);
+    return (it != _attributes.end()) ? it->second : defaultValue;
+  }
 
   String urlDecode(const String &text) const;
 };

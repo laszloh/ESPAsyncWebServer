@@ -1033,26 +1033,26 @@ const AsyncWebParameter *AsyncWebServerRequest::getParam(size_t num) const {
   return &(*std::next(_params.cbegin(), num));
 }
 
-const String &AsyncWebServerRequest::getAttribute(const char *name, const String &defaultValue) const {
-  auto it = _attributes.find(name);
-  return it != _attributes.end() ? it->second : defaultValue;
-}
-bool AsyncWebServerRequest::getAttribute(const char *name, bool defaultValue) const {
-  auto it = _attributes.find(name);
-  return it != _attributes.end() ? it->second == "1" : defaultValue;
-}
-long AsyncWebServerRequest::getAttribute(const char *name, long defaultValue) const {
-  auto it = _attributes.find(name);
-  return it != _attributes.end() ? it->second.toInt() : defaultValue;
-}
-float AsyncWebServerRequest::getAttribute(const char *name, float defaultValue) const {
-  auto it = _attributes.find(name);
-  return it != _attributes.end() ? it->second.toFloat() : defaultValue;
-}
-double AsyncWebServerRequest::getAttribute(const char *name, double defaultValue) const {
-  auto it = _attributes.find(name);
-  return it != _attributes.end() ? it->second.toDouble() : defaultValue;
-}
+// const String &AsyncWebServerRequest::getAttribute(const char *name, const String &defaultValue) const {
+//   auto it = _attributes.find(name);
+//   return it != _attributes.end() ? it->second : defaultValue;
+// }
+// bool AsyncWebServerRequest::getAttribute(const char *name, bool defaultValue) const {
+//   auto it = _attributes.find(name);
+//   return it != _attributes.end() ? it->second == "1" : defaultValue;
+// }
+// long AsyncWebServerRequest::getAttribute(const char *name, long defaultValue) const {
+//   auto it = _attributes.find(name);
+//   return it != _attributes.end() ? it->second.toInt() : defaultValue;
+// }
+// float AsyncWebServerRequest::getAttribute(const char *name, float defaultValue) const {
+//   auto it = _attributes.find(name);
+//   return it != _attributes.end() ? it->second.toFloat() : defaultValue;
+// }
+// double AsyncWebServerRequest::getAttribute(const char *name, double defaultValue) const {
+//   auto it = _attributes.find(name);
+//   return it != _attributes.end() ? it->second.toDouble() : defaultValue;
+// }
 
 AsyncWebServerResponse *AsyncWebServerRequest::beginResponse(int code, const char *contentType, const char *content, AwsTemplateProcessor callback) {
   if (callback) {
