@@ -8,11 +8,13 @@
 #include <lwip/tcpbase.h>
 
 #include <algorithm>
+#include <any>
 #include <deque>
 #include <functional>
 #include <list>
 #include <memory>
 #include <tuple>
+#include <type_traits>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -418,7 +420,22 @@ private:
   std::list<String> _pathParams;
 #endif
 
-  std::unordered_map<const char *, String, std::hash<const char *>, std::equal_to<const char *>> _attributes;
+  struct AttributeEntry {
+    const char *key;
+    std::any value;
+  };
+  std::list<AttributeEntry> _attributes;
+  // Helper to find an attribute by name
+  std::list<AttributeEntry>::iterator findAttribute(const char* name) {
+      return std::find_if(_attributes.begin(), _attributes.end(),
+          [&name](const AttributeEntry& e) { return strcmp(e.key, name) == 0; });
+  }
+
+  // Const version of the helper for const-correctness
+  std::list<AttributeEntry>::const_iterator findAttribute(const char* name) const {
+      return std::find_if(_attributes.begin(), _attributes.end(),
+          [&name](const AttributeEntry& e) { return strcmp(e.key, name) == 0; });
+  }
 
   uint8_t _multiParseState;
   uint8_t _boundaryPosition;
@@ -886,31 +903,39 @@ public:
 
   // REQUEST ATTRIBUTES
 
-  void setAttribute(const char *name, const char *value) {
-    _attributes[name] = value;
+  template<typename T>
+  void setAttribute(const char* name, T &&value) {
+    auto it = findAttribute(name);
+    if(it != _attributes.end())
+      it->value = value;
+    else
+      _attributes.push_back(AttributeEntry{name, std::forward<T>(value)});
   }
-  void setAttribute(const char *name, bool value) {
-    _attributes[name] = value ? "1" : asyncsrv::emptyString;
-  }
-  void setAttribute(const char *name, long value) {
-    _attributes[name] = String(value);
-  }
-  void setAttribute(const char *name, float value, unsigned int decimalPlaces = 2) {
-    _attributes[name] = String(value, decimalPlaces);
-  }
-  void setAttribute(const char *name, double value, unsigned int decimalPlaces = 2) {
-    _attributes[name] = String(value, decimalPlaces);
+
+  template<typename T, class ...Args>
+  void setAttribute(const char *name, Args&&... args) {
+    setAttribute(name, std::make_any<T>(std::in_place_type<T>, std::forward<Args>(args)...));
   }
 
   bool hasAttribute(const char *name) const {
-    return _attributes.find(name) != _attributes.end();
+    return findAttribute(name) != _attributes.end();
   }
 
-  const String &getAttribute(const char *name, const String &defaultValue = asyncsrv::emptyString) const;
-  bool getAttribute(const char *name, bool defaultValue) const;
-  long getAttribute(const char *name, long defaultValue) const;
-  float getAttribute(const char *name, float defaultValue) const;
-  double getAttribute(const char *name, double defaultValue) const;
+  template<typename T>
+  const T &getAttribute(const char *name, T defaultValue = {}) const {
+    auto it = findAttribute(name);
+    return (it != _attributes.end()) ? std::any_cast<const T&>(it->value) : defaultValue;
+  }
+  template<typename T>
+  T &getAttribute(const char *name, T defaultValue = {}) {
+    auto it = findAttribute(name);
+    return (it != _attributes.end()) ? std::any_cast<T&>(it->value) : defaultValue;
+  }
+
+  template<typename T, std::enable_if<std::is_standard_layout<T>::value, bool> = true>
+  T getAttribute(const char *name, T defaultValue = 0) const {
+    return getAttribute(name, defaultValue);
+  }
 
   String urlDecode(const String &text) const;
 };
