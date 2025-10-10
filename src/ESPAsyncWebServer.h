@@ -50,9 +50,7 @@
 #define ASYNCWEBSERVER_FORK_ESP32Async
 
 #ifdef ASYNCWEBSERVER_REGEX
-#define ASYNCWEBSERVER_REGEX_ATTRIBUTE
-#else
-#define ASYNCWEBSERVER_REGEX_ATTRIBUTE __attribute__((warning("ASYNCWEBSERVER_REGEX not defined")))
+#include <regex>
 #endif
 
 // See https://github.com/ESP32Async/ESPAsyncWebServer/commit/3d3456e9e81502a477f6498c44d0691499dda8f9#diff-646b25b11691c11dce25529e3abce843f0ba4bd07ab75ec9eee7e72b06dbf13fR388-R392
@@ -254,7 +252,9 @@ private:
 
   std::list<AsyncWebHeader> _headers;
   std::list<AsyncWebParameter> _params;
+#ifdef ASYNCWEBSERVER_REGEX
   std::list<String> _pathParams;
+#endif
 
   std::unordered_map<const char *, String, std::hash<const char *>, std::equal_to<const char *>> _attributes;
 
@@ -276,8 +276,6 @@ private:
   void _onTimeout(uint32_t time);
   void _onDisconnect();
   void _onData(void *buf, size_t len);
-
-  void _addPathParam(const char *param);
 
   bool _parseReqHead();
   bool _parseReqHeader();
@@ -615,10 +613,22 @@ public:
   bool hasArg(const __FlashStringHelper *data) const;  // check if F(argument) exists
 #endif
 
-  const String &ASYNCWEBSERVER_REGEX_ATTRIBUTE pathArg(size_t i) const;
-  const String &ASYNCWEBSERVER_REGEX_ATTRIBUTE pathArg(int i) const {
+#ifdef ASYNCWEBSERVER_REGEX
+  const String &pathArg(size_t i) const {
+    if (i >= _pathParams.size()) {
+      return emptyString;
+    }
+    auto it = _pathParams.begin();
+    std::advance(it, i);
+    return *it;
+  }
+  const String &pathArg(int i) const {
     return i < 0 ? emptyString : pathArg((size_t)i);
   }
+#else
+  const String &pathArg(size_t i) const __attribute__((error("ERR: pathArg() requires -D ASYNCWEBSERVER_REGEX and only works on regex handlers")));
+  const String &pathArg(int i) const __attribute__((error("ERR: pathArg() requires -D ASYNCWEBSERVER_REGEX and only works on regex handlers")));
+#endif
 
   // get request header value by name
   const String &header(const char *name) const;
