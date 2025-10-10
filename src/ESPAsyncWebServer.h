@@ -356,6 +356,17 @@ public:
   }
   void requestAuthentication(AsyncAuthType method, const char *realm = nullptr, const char *_authFailMsg = nullptr);
 
+  // detected Authentication type from "Authorization" request header during request parsing
+  AsyncAuthType authType() const {
+    return _authMethod;
+  }
+
+  // raw value of "Authorization" request header after the auth type
+  // For example, for header "Authorization: Bearer <token>", <token> is the value returned
+  const String &authChallenge() const {
+    return _authorization;
+  }
+
   // IMPORTANT: this method is for internal use ONLY
   // Please do not use it!
   // It can be removed or modified at any time without notice
@@ -774,9 +785,34 @@ protected:
 // AsyncAuthenticationMiddleware is a middleware that checks if the request is authenticated
 class AsyncAuthenticationMiddleware : public AsyncMiddleware {
 public:
+  const String &username() const {
+    return _username;
+  }
+  const String &credentials() const {
+    return _credentials;
+  }
+  const String &realm() const {
+    return _realm;
+  }
+  const String &authFailureMessage() const {
+    return _authFailMsg;
+  }
+  bool isHash() const {
+    return _hash;
+  }
+  AsyncAuthType authType() const {
+    return _authMethod;
+  }
+
   void setUsername(const char *username);
   void setPassword(const char *password);
   void setPasswordHash(const char *hash);
+
+  // can be used for Bearer token authentication with a static shared secret
+  void setToken(const char *token);
+  void setAuthentificationFunction(std::function<bool(AsyncWebServerRequest *request)> func) {
+    _authcFunc = func;
+  }
 
   void setRealm(const char *realm) {
     _realm = realm;
@@ -820,6 +856,9 @@ private:
   AsyncAuthType _authMethod = AsyncAuthType::AUTH_NONE;
   String _authFailMsg;
   bool _hasCreds = false;
+  std::function<bool(AsyncWebServerRequest *request)> _authcFunc = [this](AsyncWebServerRequest *request) {
+    return request->authenticate(_username.c_str(), _credentials.c_str(), _realm.c_str(), _hash);
+  };
 };
 
 using ArAuthorizeFunction = std::function<bool(AsyncWebServerRequest *request)>;
