@@ -312,7 +312,7 @@ bool AsyncCallbackWebHandler::canHandle(AsyncWebServerRequest *request) const {
     std::string s(request->url().c_str());
     if (std::regex_search(s, matches, pattern)) {
       for (size_t i = 1; i < matches.size(); ++i) {  // start from 1
-        request->_addPathParam(matches[i].str().c_str());
+        request->_pathParams.emplace_back(matches[i].str().c_str());
       }
     } else {
       return false;

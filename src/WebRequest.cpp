@@ -90,10 +90,6 @@ AsyncWebServerRequest::~AsyncWebServerRequest() {
 
   _this.reset();
 
-  _headers.clear();
-
-  _pathParams.clear();
-
   AsyncWebServerResponse *r = _response;
   _response = NULL;
   delete r;
@@ -269,10 +265,6 @@ void AsyncWebServerRequest::_onDisconnect() {
     _onDisconnectfn();
   }
   _server->_handleDisconnect(this);
-}
-
-void AsyncWebServerRequest::_addPathParam(const char *p) {
-  _pathParams.emplace_back(p);
 }
 
 void AsyncWebServerRequest::_addGetParams(const String &params) {
@@ -1073,15 +1065,6 @@ const String &AsyncWebServerRequest::arg(size_t i) const {
 
 const String &AsyncWebServerRequest::argName(size_t i) const {
   return getParam(i)->name();
-}
-
-const String &AsyncWebServerRequest::pathArg(size_t i) const {
-  if (i >= _pathParams.size()) {
-    return emptyString;
-  }
-  auto it = _pathParams.begin();
-  std::advance(it, i);
-  return *it;
 }
 
 const String &AsyncWebServerRequest::header(const char *name) const {
