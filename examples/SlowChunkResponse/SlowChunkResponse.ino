@@ -114,6 +114,11 @@ void setup() {
   //
   // time curl -N -v -G -d 'd=2000' -d 'l=10000'  http://192.168.4.1/slow.html --output -
   //
+  // THIS CODE WILL CRASH BECAUSE OF THE WATCHDOG.
+  // IF YOU REALLY NEED TO DO THIS, YOU MUST DISABLE THE TWDT
+  //
+  // CORRECT WAY IS TO USE SSE OR WEBSOCKETS TO DO THE COSTLY PROCESSING ASYNC.
+  //
   server.on("/slow.html", HTTP_GET, [](AsyncWebServerRequest *request) {
     uint32_t d = request->getParam("d")->value().toInt();
     uint32_t l = request->getParam("l")->value().toInt();
