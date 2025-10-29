@@ -311,12 +311,12 @@ void AsyncWebSocketClient::_onAck(size_t len, uint32_t time) {
 #ifdef ESP32
           /*
             Unlocking has to be called before return execution otherwise std::unique_lock ::~unique_lock() will get an exception pthread_mutex_unlock.
-            Due to _client->close(true) shall call the callback function _onDisconnect()
+            Due to _client->close() shall call the callback function _onDisconnect()
             The calling flow _onDisconnect() --> _handleDisconnect() --> ~AsyncWebSocketClient()
           */
           lock.unlock();
 #endif
-          _client->close(true);
+          _client->close();
         }
         return;
       }
@@ -423,12 +423,12 @@ bool AsyncWebSocketClient::_queueMessage(AsyncWebSocketSharedBuffer buffer, uint
 #ifdef ESP32
         /*
           Unlocking has to be called before return execution otherwise std::unique_lock ::~unique_lock() will get an exception pthread_mutex_unlock.
-          Due to _client->close(true) shall call the callback function _onDisconnect()
+          Due to _client->close() shall call the callback function _onDisconnect()
           The calling flow _onDisconnect() --> _handleDisconnect() --> ~AsyncWebSocketClient()
         */
         lock.unlock();
 #endif
-        _client->close(true);
+        _client->close();
       }
 
       async_ws_log_e("Too many messages queued: closing connection");
@@ -497,7 +497,7 @@ void AsyncWebSocketClient::_onTimeout(uint32_t time) {
   }
   // Serial.println("onTime");
   (void)time;
-  _client->close(true);
+  _client->close();
 }
 
 void AsyncWebSocketClient::_onDisconnect() {
@@ -582,7 +582,7 @@ void AsyncWebSocketClient::_onData(void *pbuf, size_t plen) {
         if (_status == WS_DISCONNECTING) {
           _status = WS_DISCONNECTED;
           if (_client) {
-            _client->close(true);
+            _client->close();
           }
         } else {
           _status = WS_DISCONNECTING;
@@ -1287,7 +1287,7 @@ AsyncWebSocketResponse::AsyncWebSocketResponse(const String &key, AsyncWebSocket
 
 void AsyncWebSocketResponse::_respond(AsyncWebServerRequest *request) {
   if (_state == RESPONSE_FAILED) {
-    request->client()->close(true);
+    request->client()->close();
     return;
   }
   String out;

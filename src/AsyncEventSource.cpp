@@ -285,7 +285,7 @@ void AsyncEventSourceClient::_onPoll() {
 
 void AsyncEventSourceClient::_onTimeout(uint32_t time __attribute__((unused))) {
   if (_client) {
-    _client->close(true);
+    _client->close();
   }
 }
 
