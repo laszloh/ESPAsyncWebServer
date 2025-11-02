@@ -520,6 +520,16 @@ void AsyncWebServerRequest::_parseMultipartPostByte(uint8_t data, bool last) {
             _itemFilename = nameVal;
             _itemIsFile = true;
           }
+          // Add the parameters from the content-disposition header to the param list, flagged as POST and File,
+          // so that they can be retrieved using getParam(name, isPost=true, isFile=true)
+          // in the upload handler to correctly handle multiple file uploads within the same request.
+          // Example: Content-Disposition: form-data; name="fw"; filename="firmware.bin"
+          // See: https://github.com/ESP32Async/ESPAsyncWebServer/discussions/328
+          if (_itemIsFile && _itemName.length() && _itemFilename.length()) {
+            // add new parameters for this content-disposition
+            _params.emplace_back(T_name, _itemName, true, true);
+            _params.emplace_back(T_filename, _itemFilename, true, true);
+          }
         }
         _temp = emptyString;
       } else {
@@ -593,6 +603,10 @@ void AsyncWebServerRequest::_parseMultipartPostByte(uint8_t data, bool last) {
         }
         _itemBufferIndex = 0;
         _params.emplace_back(_itemName, _itemFilename, true, true, _itemSize);
+        // remove previous occurrence(s) of content-disposition parameters for this upload
+        _params.remove_if([this](const AsyncWebParameter &p) {
+          return p.isPost() && p.isFile() && (p.name() == T_name || p.name() == T_filename);
+        });
         free(_itemBuffer);
         _itemBuffer = NULL;
       }
