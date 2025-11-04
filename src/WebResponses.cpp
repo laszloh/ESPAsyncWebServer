@@ -443,7 +443,15 @@ size_t AsyncAbstractResponse::write_send_buffs(AsyncWebServerRequest *request, s
         size_t const readLen =
           _fillBufferAndProcessTemplates(_send_buffer->data() + 6, std::min(_send_buffer->size(), tcp_win) - 8);  // reserve 8 bytes for chunk size data
         if (readLen != RESPONSE_TRY_AGAIN) {
-          sprintf(reinterpret_cast<char *>(_send_buffer->data()), "%04x\r\n", readLen);  // print chunk size in buffer
+          // Write 4 hex digits directly without null terminator
+          static constexpr char hexChars[] = "0123456789abcdef";
+          _send_buffer->data()[0] = hexChars[(readLen >> 12) & 0xF];
+          _send_buffer->data()[1] = hexChars[(readLen >> 8) & 0xF];
+          _send_buffer->data()[2] = hexChars[(readLen >> 4) & 0xF];
+          _send_buffer->data()[3] = hexChars[readLen & 0xF];
+          _send_buffer->data()[4] = '\r';
+          _send_buffer->data()[5] = '\n';
+          // data (readLen bytes) is already there
           _send_buffer->at(readLen + 6) = '\r';
           _send_buffer->at(readLen + 7) = '\n';
           _send_buffer_len += readLen + 8;  // set buffers's size to match added data
