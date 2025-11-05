@@ -305,6 +305,19 @@ public:
   AsyncClient *client() {
     return _client;
   }
+
+  /**
+   * @brief release owned AsyncClient object
+   * AsyncClient pointer will be abandoned in this instance,
+   * the further ownership of the connection should be managed out of request's life-time scope
+   * could be used for long lived connection like SSE or WebSockets
+   * @note do not call this method unless you know what you are doing, otherwise it may lead to
+   * memory leaks and connections lingering
+   *
+   * @return AsyncClient* pointer to released connection object
+   */
+  AsyncClient *clientRelease();
+
   uint8_t version() const {
     return _version;
   }
@@ -1336,8 +1349,10 @@ protected:
   bool _sendContentLength;
   bool _chunked;
   size_t _headLength;
+  // amount of data sent for content part of the response (excluding all headers)
   size_t _sentLength;
   size_t _ackedLength;
+  // amount of response bytes (including all headers) written to sockbuff for delivery
   size_t _writtenLength;
   WebResponseState _state;
 
@@ -1394,7 +1409,20 @@ public:
   virtual bool _failed() const;
   virtual bool _sourceValid() const;
   virtual void _respond(AsyncWebServerRequest *request);
-  virtual size_t _ack(AsyncWebServerRequest *request, size_t len, uint32_t time);
+
+  /**
+   * @brief write next portion of response data to send buffs
+   * this method (re)fills tcp send buffers, it could be called either at will
+   * or from a tcp_recv/tcp_poll callbacks from AsyncTCP
+   *
+   * @param request - used to access client object
+   * @param len - size of acknowledged data from the remote side (TCP window update, not TCP ack!)
+   * @param time - time passed between last sent and received packet
+   * @return size_t amount of response data placed to TCP send buffs for delivery (defined by sdkconfig value CONFIG_LWIP_TCP_SND_BUF_DEFAULT)
+   */
+  virtual size_t _ack(AsyncWebServerRequest *request, size_t len, uint32_t time) {
+    return 0;
+  };
 };
 
 /*

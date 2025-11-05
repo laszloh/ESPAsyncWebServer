@@ -221,14 +221,10 @@ size_t AsyncWebSocketMessage::send(AsyncClient *client) {
 const char *AWSC_PING_PAYLOAD = "ESPAsyncWebServer-PING";
 const size_t AWSC_PING_PAYLOAD_LEN = 22;
 
-AsyncWebSocketClient::AsyncWebSocketClient(AsyncWebServerRequest *request, AsyncWebSocket *server) : _tempObject(NULL) {
-  _client = request->client();
-  _server = server;
-  _clientId = _server->_getNextId();
-  _status = WS_CONNECTED;
-  _pstate = 0;
-  _lastMessageTime = millis();
-  _keepAlivePeriod = 0;
+AsyncWebSocketClient::AsyncWebSocketClient(AsyncClient *client, AsyncWebSocket *server)
+  : _client(client), _server(server), _clientId(_server->_getNextId()), _status(WS_CONNECTED), _pstate(0), _lastMessageTime(millis()), _keepAlivePeriod(0),
+    _tempObject(NULL) {
+
   _client->setRxTimeout(0);
   _client->onError(
     [](void *r, AsyncClient *c, int8_t error) {
@@ -272,7 +268,6 @@ AsyncWebSocketClient::AsyncWebSocketClient(AsyncWebServerRequest *request, Async
     },
     this
   );
-  delete request;
   memset(&_pinfo, 0, sizeof(_pinfo));
 }
 
@@ -806,7 +801,10 @@ void AsyncWebSocket::_handleEvent(AsyncWebSocketClient *client, AwsEventType typ
 
 AsyncWebSocketClient *AsyncWebSocket::_newClient(AsyncWebServerRequest *request) {
   _clients.emplace_back(request, this);
+  // we've just detached AsyncTCP client from AsyncWebServerRequest
   _handleEvent(&_clients.back(), WS_EVT_CONNECT, request, NULL, 0);
+  // after user code completed CONNECT event callback we can delete req/response objects
+  delete request;
   return &_clients.back();
 }
 
@@ -1243,8 +1241,7 @@ AsyncWebSocketMessageBuffer *AsyncWebSocket::makeBuffer(const uint8_t *data, siz
  * Authentication code from https://github.com/Links2004/arduinoWebSockets/blob/master/src/WebSockets.cpp#L480
  */
 
-AsyncWebSocketResponse::AsyncWebSocketResponse(const String &key, AsyncWebSocket *server) {
-  _server = server;
+AsyncWebSocketResponse::AsyncWebSocketResponse(const String &key, AsyncWebSocket *server) : _server(server) {
   _code = 101;
   _sendContentLength = false;
 
@@ -1290,18 +1287,26 @@ void AsyncWebSocketResponse::_respond(AsyncWebServerRequest *request) {
     request->client()->close();
     return;
   }
+  // unbind client's onAck callback from AsyncWebServerRequest's, we will destroy it on next callback and steal the client,
+  // can't do it now 'cause now we are in AsyncWebServerRequest::_onAck 's stack actually
+  // here we are loosing time on one RTT delay, but with current design we can't get rid of Req/Resp objects other way
+  _request = request;
+  request->client()->onAck(
+    [](void *r, AsyncClient *c, size_t len, uint32_t time) {
+      if (len) {
+        static_cast<AsyncWebSocketResponse *>(r)->_switchClient();
+      }
+    },
+    this
+  );
   String out;
   _assembleHead(out, request->version());
   request->client()->write(out.c_str(), _headLength);
   _state = RESPONSE_WAIT_ACK;
 }
 
-size_t AsyncWebSocketResponse::_ack(AsyncWebServerRequest *request, size_t len, uint32_t time) {
-  (void)time;
-
-  if (len) {
-    _server->_newClient(request);
-  }
-
-  return 0;
+void AsyncWebSocketResponse::_switchClient() {
+  // detach client from request
+  _server->_newClient(_request);
+  // _newClient() would also destruct _request and *this
 }

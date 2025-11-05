@@ -71,12 +71,12 @@ void setup() {
   });
 
   events.onConnect([](AsyncEventSourceClient *client) {
-    Serial.printf("SSE Client connected! ID: %" PRIu32 "\n", client->lastId());
+    Serial.printf("SSE Client connected!");
     client->send("hello!", NULL, millis(), 1000);
   });
 
   events.onDisconnect([](AsyncEventSourceClient *client) {
-    Serial.printf("SSE Client disconnected! ID: %" PRIu32 "\n", client->lastId());
+    Serial.printf("SSE Client disconnected!");
   });
 
   server.addHandler(&events);

@@ -65,6 +65,64 @@ private:
   size_t _sent = 0;
 };
 
+// Code to reproduce issues:
+// - https://github.com/ESP32Async/ESPAsyncWebServer/issues/242
+// - https://github.com/ESP32Async/ESPAsyncWebServer/issues/315
+//
+// https://github.com/ESP32Async/ESPAsyncWebServer/pull/317#issuecomment-3421141039
+//
+// I cracked it.
+// So this is how it works:
+// That space that _tcp is writing to identified by CONFIG_TCP_SND_BUF_DEFAULT (and is value-matching with default TCP windows size which is very confusing itself).
+// The space returned by client()->write() and client->space() somehow might not be atomically/thread synced (had not dived that deep yet). So if first call to _fillBuffer is done via user-code thread and ended up with some small amount of data consumed and second one is done by _poll or _ack? returns full size again! This is where old code fails.
+// If you change your class this way it will fail 100%.
+class CustomResponseMRE : public AsyncAbstractResponse {
+public:
+  explicit CustomResponseMRE() {
+    _code = 200;
+    _contentType = "text/plain";
+    _sendContentLength = false;
+    // add some useless headers
+    addHeader("Clear-Site-Data", "Clears browsing data (e.g., cookies, storage, cache) associated with the requesting website.");
+    addHeader(
+      "No-Vary-Search", "Specifies a set of rules that define how a URL's query parameters will affect cache matching. These rules dictate whether the same "
+                        "URL with different URL parameters should be saved as separate browser cache entries"
+    );
+  }
+
+  bool _sourceValid() const override {
+    return true;
+  }
+
+  size_t _fillBuffer(uint8_t *buf, size_t buflen) override {
+    if (fillChar == NULL) {
+      fillChar = 'A';
+      return RESPONSE_TRY_AGAIN;
+    }
+    if (_sent == RESPONSE_TRY_AGAIN) {
+      Serial.println("Simulating temporary unavailability of data...");
+      _sent = 0;
+      return RESPONSE_TRY_AGAIN;
+    }
+    size_t remaining = totalResponseSize - _sent;
+    if (remaining == 0) {
+      return 0;
+    }
+    if (buflen > remaining) {
+      buflen = remaining;
+    }
+    Serial.printf("Filling '%c' @ sent: %u, buflen: %u\n", fillChar, _sent, buflen);
+    std::fill_n(buf, buflen, static_cast<uint8_t>(fillChar));
+    _sent += buflen;
+    fillChar = (fillChar == 'Z') ? 'A' : fillChar + 1;
+    return buflen;
+  }
+
+private:
+  char fillChar = NULL;
+  size_t _sent = 0;
+};
+
 void setup() {
   Serial.begin(115200);
 
@@ -77,14 +135,7 @@ void setup() {
   //
   // curl -v http://192.168.4.1/1 | grep -o '.' | sort | uniq -c
   //
-  // Should output 16000 and the counts for each character from A to D
-  //
-  // Console:
-  //
-  // Filling 'A' @ index: 0, maxLen: 5652, toSend: 5652
-  // Filling 'B' @ index: 5652, maxLen: 4308, toSend: 4308
-  // Filling 'C' @ index: 9960, maxLen: 2888, toSend: 2888
-  // Filling 'D' @ index: 12848, maxLen: 3152, toSend: 3152
+  // Should output 16000 and a distribution of letters which is the same in ESP32 logs and console
   //
   server.on("/1", HTTP_GET, [](AsyncWebServerRequest *request) {
     fillChar = 'A';
@@ -103,17 +154,20 @@ void setup() {
   //
   // curl -v http://192.168.4.1/2 | grep -o '.' | sort | uniq -c
   //
-  // Should output 16000
-  //
-  // Console:
-  //
-  // Filling 'A' @ sent: 0, buflen: 5675
-  // Filling 'B' @ sent: 5675, buflen: 4308
-  // Filling 'C' @ sent: 9983, buflen: 5760
-  // Filling 'D' @ sent: 15743, buflen: 257
+  // Should output 16000 and a distribution of letters which is the same in ESP32 logs and console
   //
   server.on("/2", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(new CustomResponse());
+  });
+
+  // Example to use a AsyncAbstractResponse
+  //
+  // curl -v http://192.168.4.1/3 | grep -o '.' | sort | uniq -c
+  //
+  // Should output 16000 and a distribution of letters which is the same in ESP32 logs and console
+  //
+  server.on("/3", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(new CustomResponseMRE());
   });
 
   server.begin();

@@ -211,6 +211,9 @@ private:
   AsyncWebSocket *_server;
   uint32_t _clientId;
   AwsClientStatus _status;
+  uint8_t _pstate;
+  uint32_t _lastMessageTime;
+  uint32_t _keepAlivePeriod;
 #ifdef ESP32
   mutable std::recursive_mutex _lock;
 #endif
@@ -218,11 +221,7 @@ private:
   std::deque<AsyncWebSocketMessage> _messageQueue;
   bool closeWhenFull = true;
 
-  uint8_t _pstate;
   AwsFrameInfo _pinfo;
-
-  uint32_t _lastMessageTime;
-  uint32_t _keepAlivePeriod;
 
   bool _queueControl(uint8_t opcode, const uint8_t *data = NULL, size_t len = 0, bool mask = false);
   bool _queueMessage(AsyncWebSocketSharedBuffer buffer, uint8_t opcode = WS_TEXT, bool mask = false);
@@ -232,7 +231,15 @@ private:
 public:
   void *_tempObject;
 
-  AsyncWebSocketClient(AsyncWebServerRequest *request, AsyncWebSocket *server);
+  AsyncWebSocketClient(AsyncClient *client, AsyncWebSocket *server);
+
+  /**
+   * @brief Construct a new Async Web Socket Client object
+   * @note constructor would take the ownership of of AsyncTCP's client pointer from `request` parameter and call delete on it!
+   * @param request
+   * @param server
+   */
+  AsyncWebSocketClient(AsyncWebServerRequest *request, AsyncWebSocket *server) : AsyncWebSocketClient(request->clientRelease(), server){};
   ~AsyncWebSocketClient();
 
   // client id increments for the given server
@@ -464,11 +471,16 @@ class AsyncWebSocketResponse : public AsyncWebServerResponse {
 private:
   String _content;
   AsyncWebSocket *_server;
+  AsyncWebServerRequest *_request;
+  // this call back will switch AsyncTCP client to WebSocket
+  void _switchClient();
 
 public:
   AsyncWebSocketResponse(const String &key, AsyncWebSocket *server);
   void _respond(AsyncWebServerRequest *request);
-  size_t _ack(AsyncWebServerRequest *request, size_t len, uint32_t time);
+  size_t _ack(AsyncWebServerRequest *request, size_t len, uint32_t time) override {
+    return 0;
+  };
   bool _sourceValid() const {
     return true;
   }
