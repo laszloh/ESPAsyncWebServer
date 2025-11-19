@@ -97,6 +97,7 @@ void setup() {
 
   wsHandler.onMessage([](AsyncWebSocket *server, AsyncWebSocketClient *client, const uint8_t *data, size_t len) {
     Serial.printf("Client %" PRIu32 " data: %s\n", client->id(), (const char *)data);
+    server->textAll(data, len);
   });
 
   wsHandler.onFragment([](AsyncWebSocket *server, AsyncWebSocketClient *client, const AwsFrameInfo *frameInfo, const uint8_t *data, size_t len) {
