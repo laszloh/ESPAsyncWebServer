@@ -62,6 +62,12 @@
 #define ASYNCWEBSERVER_USE_CHUNK_INFLIGHT 1
 #endif
 
+#if SOC_WIFI_SUPPORTED || CONFIG_ESP_WIFI_REMOTE_ENABLED || LT_ARD_HAS_WIFI || CONFIG_ESP32_WIFI_ENABLED || defined(ESP8266)
+#define ASYNCWEBSERVER_WIFI_SUPPORTED 1
+#else
+#define ASYNCWEBSERVER_WIFI_SUPPORTED 0
+#endif
+
 class AsyncWebServer;
 class AsyncWebServerRequest;
 class AsyncWebServerResponse;
