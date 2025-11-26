@@ -16,8 +16,12 @@
 #include "./literals.h"
 
 #ifndef CONFIG_LWIP_TCP_MSS
+#ifdef TCP_MSS  // ESP8266
+#define CONFIG_LWIP_TCP_MSS TCP_MSS
+#else
 // as it is defined for ESP32's Arduino LWIP
 #define CONFIG_LWIP_TCP_MSS 1436
+#endif
 #endif
 
 #define ASYNC_RESPONCE_BUFF_SIZE CONFIG_LWIP_TCP_MSS * 2
