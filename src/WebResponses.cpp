@@ -10,8 +10,12 @@
 #include <utility>
 
 #ifndef CONFIG_LWIP_TCP_WND_DEFAULT
+#ifdef TCP_WND  // ESP8266
+#define CONFIG_LWIP_TCP_WND_DEFAULT TCP_WND
+#else
 // as it is defined for esp32's LWIP
 #define CONFIG_LWIP_TCP_WND_DEFAULT 5760
+#endif
 #endif
 
 using namespace asyncsrv;
