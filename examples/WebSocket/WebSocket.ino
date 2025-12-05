@@ -107,6 +107,7 @@ void setup() {
         if (info->opcode == WS_TEXT) {
           data[len] = 0;
           Serial.printf("ws text: %s\n", (char *)data);
+          client->ping();
         }
       }
     }
