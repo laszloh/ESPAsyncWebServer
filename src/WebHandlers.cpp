@@ -237,11 +237,7 @@ void AsyncStaticWebHandler::handleRequest(AsyncWebServerRequest *request) {
       size_t fileSize = request->_tempFile.size();
       etagValue = static_cast<uint32_t>(fileSize);
     }
-#ifndef ESP8266
-    snprintf(etag, sizeof(etag), "%08lx", etagValue);
-#else
-    snprintf(etag, sizeof(etag), "%08x", etagValue);
-#endif
+    snprintf(etag, sizeof(etag), "%08" PRIx32, etagValue);
   } else {
     etag[0] = '\0';
   }
