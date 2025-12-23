@@ -200,7 +200,6 @@ server.on(AsyncURIMatcher::exact("/login"), handler);
 server.on(AsyncURIMatcher::prefix("/api"), handler);
 server.on(AsyncURIMatcher::dir("/admin"), handler);
 server.on(AsyncURIMatcher::ext("/images/*.jpg"), handler);
-server.on(AsyncURIMatcher::iExact("/case"), handler);
 
 #ifdef ASYNCWEBSERVER_REGEX
 server.on(AsyncURIMatcher::regex("^/user/([0-9]+)$"), handler);
