@@ -120,7 +120,7 @@ void setup() {
   //
   // > autocannon -c 16 -w 16 -d 20 --renderStatusCodes  http://192.168.4.1/
   // > ab -c 16 -t 20 http://192.168.4.1/
-  // 
+  //
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     // need to cast to uint8_t*
     // if you do not, the const char* will be copied in a temporary String buffer
