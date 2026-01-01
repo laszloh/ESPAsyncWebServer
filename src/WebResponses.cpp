@@ -470,8 +470,16 @@ size_t AsyncAbstractResponse::write_send_buffs(AsyncWebServerRequest *request, s
           }
         }
       } else {
-        size_t const readLen =
-          _fillBufferAndProcessTemplates(_send_buffer->data(), std::min(std::min(_send_buffer->size(), tcp_win), _contentLength - _sentLength));
+        // Non-chunked data. We can either have a response:
+        // - with a known content-length (example: Json response), in that case we pass the remaining length if lower than tcp_win
+        // - or with unknown content-length (see LargeResponse example, like ESP32Cam with streaming), in that case we just fill as much as tcp_win allows
+        size_t maxLen = std::min(_send_buffer->size(), tcp_win);
+        if (_contentLength) {
+          maxLen = _contentLength > _sentLength ? std::min(maxLen, _contentLength - _sentLength) : 0;
+        }
+
+        size_t const readLen = _fillBufferAndProcessTemplates(_send_buffer->data(), maxLen);
+
         if (readLen == 0) {
           // no more data to send
           _state = RESPONSE_END;
