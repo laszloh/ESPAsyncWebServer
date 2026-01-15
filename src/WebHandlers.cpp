@@ -210,7 +210,7 @@ void AsyncStaticWebHandler::handleRequest(AsyncWebServerRequest *request) {
   }
 
   // Get server ETag. If file is not GZ and we have a Template Processor, ETag is set to an empty string
-  char etag[9];
+  char etag[11];
   const char *tempFileName = request->_tempFile.name();
   const size_t lenFilename = strlen(tempFileName);
 
@@ -237,7 +237,8 @@ void AsyncStaticWebHandler::handleRequest(AsyncWebServerRequest *request) {
       size_t fileSize = request->_tempFile.size();
       etagValue = static_cast<uint32_t>(fileSize);
     }
-    snprintf(etag, sizeof(etag), "%08" PRIx32, etagValue);
+    // RFC9110 Section-8.8.3: Value of the ETag response must be enclosed in double quotes
+    snprintf(etag, sizeof(etag), "\"%08" PRIx32 "\"", etagValue);
   } else {
     etag[0] = '\0';
   }
