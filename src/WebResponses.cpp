@@ -732,7 +732,7 @@ AsyncFileResponse::AsyncFileResponse(FS &fs, const String &path, const char *con
     gzPath.concat(asyncsrv::T__gz);
     _content = fs.open(gzPath, fs::FileOpenMode::read);
 
-    char serverETag[9];
+    char serverETag[11];
     if (AsyncWebServerRequest::_getEtag(_content, serverETag)) {
       addHeader(T_Content_Encoding, T_gzip, false);
       _callback = nullptr;  // Unable to process zipped templates
