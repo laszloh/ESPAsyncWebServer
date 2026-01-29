@@ -58,15 +58,27 @@ void handleRequest(AsyncWebServerRequest *request) {
   }
 
   // If request->_tempObject is not null, handleBody already
-  // did the necessary work for a PUT operation
+  // did the necessary work for a PUT operation.  Otherwise,
+  // handleBody was either not called, or did nothing, so we
+  // handle the request later in this routine.  That happens
+  // when a non-chunked PUT has Content-Length: 0.
   auto state = static_cast<RequestState *>(request->_tempObject);
   if (state) {
+    // If handleBody successfully opened the file, whether or not it
+    // wrote data to it, we close it here and send the "created"
+    // response.  If handleBody did not open the file, because the
+    // open attempt failed or because the operation was rejected,
+    // state will be non-null but state->outFile will be false.  In
+    // that case, handleBody has already sent an appropriate
+    // response code.
+
     if (state->outFile) {
       // The file was already opened and written in handleBody so
-      // we are done.  We will handle PUT without body data below.
+      // we close it here and issue the appropriate response.
       state->outFile.close();
       request->send(201);  // Created
     }
+    // Finally, releast the resources used by state
     delete state;
     request->_tempObject = nullptr;
     return;
@@ -74,28 +86,23 @@ void handleRequest(AsyncWebServerRequest *request) {
 
   String path = request->url();
 
-  if (request->method() == HTTP_PUT) {
-    // This PUT code executes if the body was empty, which
-    // can happen if the client creates a zero-length file.
-    // MacOS WebDAVFS does that, then later LOCKs the file
-    // and issues a subsequent PUT with body contents.
+  // This PUT code executes if the body was empty, which
+  // can happen if the client creates a zero-length file.
+  // MacOS WebDAVFS does that, then later LOCKs the file
+  // and issues a subsequent PUT with body contents.
 
 #ifdef ESP32
-    File file = LittleFS.open(path, "w", true);
+  File file = LittleFS.open(path, "w", true);
 #else
-    File file = LittleFS.open(path, "w");
+  File file = LittleFS.open(path, "w");
 #endif
 
-    if (file) {
-      file.close();
-      request->send(201);  // Created
-      return;
-    }
-    request->send(403);
+  if (file) {
+    file.close();
+    request->send(201);  // Created
     return;
   }
-
-  request->send(404);
+  request->send(403);
 }
 
 void handleBody(AsyncWebServerRequest *request, unsigned char *data, size_t len, size_t index, size_t total) {
@@ -141,8 +148,12 @@ void handleBody(AsyncWebServerRequest *request, unsigned char *data, size_t len,
         request->send(403, "text/plain", "Cannot PUT to a directory");
         return;
       }
-      // If we already returned, the File object in request->_tempObject
-      // is the default-contructed one.  The presence of
+      // If we already returned, the File object in
+      // request->_tempObject is the default-constructed one.  The
+      // presence of a non-default-constructed File in state->outFile
+      // indicates that the file was opened successfully and is ready
+      // to receive body data.  The File will be closed later when
+      // handleRequest is called after all calls to handleBody
 
       std::swap(state->outFile, file);
       // Now request->_tempObject contains the actual file object which owns it,

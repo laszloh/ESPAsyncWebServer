@@ -216,7 +216,7 @@ DECLARE_STR(T_HTTP_CODE_502, "Bad Gateway");
 DECLARE_STR(T_HTTP_CODE_503, "Service Unavailable");
 DECLARE_STR(T_HTTP_CODE_504, "Gateway Time-out");
 DECLARE_STR(T_HTTP_CODE_505, "HTTP Version Not Supported");
-DECLARE_STR(T_HTTP_CODE_507, "Insufficient storage");
+DECLARE_STR(T_HTTP_CODE_507, "Insufficient Storage");
 DECLARE_STR(T_HTTP_CODE_ANY, "Unknown code");
 
 static constexpr const char *T_only_once_headers[] = {
