@@ -78,9 +78,8 @@ void handleRequest(AsyncWebServerRequest *request) {
       state->outFile.close();
       request->send(201);  // Created
     }
-    // Finally, release the resources used by state
-    delete state;
-    request->_tempObject = nullptr;
+    // The resources used by state will be automatically freed
+    // when the framework frees the _tempObject pointer
     return;
   }
 
@@ -112,8 +111,11 @@ void handleBody(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_
       // parse the url to a proper path
       String path = request->url();
 
-      state = new RequestState{File()};
-      request->_tempObject = static_cast<void *>(state);
+      // Allocate the _tempObject memory
+      request->_tempObject = std::malloc(sizeof(RequestState));
+
+      // Use placement new to construct the RequestState object therein
+      RequestState *state = new (request->_tempObject) RequestState{File()};
 
       if (total) {
 #ifdef ESP32
