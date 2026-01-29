@@ -445,6 +445,8 @@ bool AsyncWebServerRequest::_parseChunkedBytes(uint8_t *buf, size_t len) {
         // (e.g. an open file), so it is probably best to just ignore
         // the rest of the data and give handleRequest a chance to
         // clean up.
+        _chunkSize = 0;
+        return true;
       }
     }
   }
@@ -513,8 +515,6 @@ bool AsyncWebServerRequest::_parseReqHeader() {
         _chunkSize = 0;
         _chunkStartIndex = 0;
         _chunkedParseState = CHUNK_LENGTH;
-        _itemIsFile = true;
-        _itemFilename = _url;
       }
     }
     _headers.emplace_back(std::move(header));

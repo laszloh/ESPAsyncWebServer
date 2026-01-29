@@ -24,7 +24,7 @@ using namespace asyncsrv;
 
 // Tests:
 //
-// Upload a file  with PUT
+// Upload a file with PUT
 //   curl -T myfile.txt http://192.168.4.1/
 //
 // Upload a file with PUT using chunked encoding
@@ -78,7 +78,7 @@ void handleRequest(AsyncWebServerRequest *request) {
       state->outFile.close();
       request->send(201);  // Created
     }
-    // Finally, releast the resources used by state
+    // Finally, release the resources used by state
     delete state;
     request->_tempObject = nullptr;
     return;
@@ -105,7 +105,7 @@ void handleRequest(AsyncWebServerRequest *request) {
   request->send(403);
 }
 
-void handleBody(AsyncWebServerRequest *request, unsigned char *data, size_t len, size_t index, size_t total) {
+void handleBody(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
   if (request->method() == HTTP_PUT) {
     auto state = static_cast<RequestState *>(request->_tempObject);
     if (index == 0) {
@@ -125,7 +125,7 @@ void handleBody(AsyncWebServerRequest *request, unsigned char *data, size_t len,
 #endif
         avail -= 4096;  // Reserve a block for overhead
         if (total > avail) {
-          Serial.printf("PUT %d bytes will not fit in available space (%d).\n", total, avail);
+          Serial.printf("PUT %u bytes will not fit in available space (%u).\n", total, avail);
           request->send(507, "text/plain", "Too large for available storage\r\n");
           return;
         }
