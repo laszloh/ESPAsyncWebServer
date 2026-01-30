@@ -115,7 +115,7 @@ void handleBody(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_
       request->_tempObject = std::malloc(sizeof(RequestState));
 
       // Use placement new to construct the RequestState object therein
-      RequestState *state = new (request->_tempObject) RequestState{File()};
+      state = new (request->_tempObject) RequestState{File()};
 
       if (total) {
 #ifdef ESP32
