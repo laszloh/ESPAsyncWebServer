@@ -125,7 +125,7 @@ void handleBody(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_
         LittleFS.info(info);
         auto avail = info.totalBytes - info.usedBytes;
 #endif
-        avail -= 4096;  // Reserve a block for overhead
+        avail = (avail >= 4096) ? avail - 4096 : avail;  // Reserve a block for overhead
         if (total > avail) {
           Serial.printf("PUT %u bytes will not fit in available space (%u).\n", total, avail);
           request->send(507, "text/plain", "Too large for available storage\r\n");
