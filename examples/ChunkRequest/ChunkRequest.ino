@@ -41,6 +41,8 @@ using namespace asyncsrv;
 //   curl -T bigfile.txt -H 'Transfer-Encoding: chunked' -H 'X-Expected-Entity-Length: 99999999' http://192.168.4.1/
 //   ** Note: MacOS WebDAVFS supplies the X-Expected-Entity-Length header with its
 //   ** chunked PUTs
+// Malformed chunk (triggers abort)
+//   printf 'PUT /bad HTTP/1.1\r\nTransfer-Encoding: chunked\r\n\r\n5\r\n12345\r\nZ\r\n' | nc 192.168.4.1 80
 
 // This struct is used with _tempObject to communicate between handleBody and a subsequent handleRequest
 struct RequestState {
@@ -141,7 +143,7 @@ void handleBody(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_
 #endif
         avail = (avail >= 4096) ? avail - 4096 : avail;  // Reserve a block for overhead
         if (total > avail) {
-          Serial.printf("PUT %u bytes will not fit in available space (%u).\n", total, avail);
+          Serial.printf("PUT %zu bytes will not fit in available space (%zu).\n", total, avail);
           request->send(507, "text/plain", "Too large for available storage\r\n");
           return;
         }
