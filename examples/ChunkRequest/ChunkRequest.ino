@@ -117,6 +117,20 @@ void handleBody(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_
       // Use placement new to construct the RequestState object therein
       state = new (request->_tempObject) RequestState{File()};
 
+      // If the client disconnects or there is a parsing error,
+      // handleRequest will not be called so we need to close
+      // the file.  The memory backing _tempObject will be freed
+      // automatically.
+      request->onDisconnect([request]() {
+        Serial.println("Client disconnected");
+        auto state = static_cast<RequestState *>(request->_tempObject);
+        if (state) {
+          if (state->outFile) {
+            state->outFile.close();
+          }
+        }
+      });
+
       if (total) {
 #ifdef ESP32
         size_t avail = LittleFS.totalBytes() - LittleFS.usedBytes();
@@ -163,7 +177,7 @@ void handleBody(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_
       // go out of scope
     }
     if (state && state->outFile) {
-      Serial.printf("write %d at %d\n", len, index);
+      Serial.printf("Writing %d bytes at offset %d\n", len, index);
       auto actual = state->outFile.write(data, len);
       if (actual != len) {
         Serial.println("WebDAV write failed.  Deleting file.");

@@ -43,7 +43,7 @@ AsyncWebServerRequest::AsyncWebServerRequest(AsyncWebServer *s, AsyncClient *c)
     _url(), _host(), _contentType(), _boundary(), _authorization(), _reqconntype(RCT_HTTP), _authMethod(AsyncAuthType::AUTH_NONE), _isMultipart(false),
     _isPlainPost(false), _expectingContinue(false), _contentLength(0), _parsedLength(0), _multiParseState(0), _boundaryPosition(0), _itemStartIndex(0),
     _itemSize(0), _itemName(), _itemFilename(), _itemType(), _itemValue(), _itemBuffer(0), _itemBufferIndex(0), _itemIsFile(false), _chunkStartIndex(0),
-    _chunkOffset(0), _chunkSize(0), _chunkedParseState(CHUNK_NONE), _tempObject(NULL) {
+    _chunkOffset(0), _chunkSize(0), _chunkedParseState(CHUNK_NONE), _chunkedLastChar(0), _tempObject(NULL) {
   c->onError(
     [](void *r, AsyncClient *c, int8_t error) {
       (void)c;
@@ -387,6 +387,9 @@ bool AsyncWebServerRequest::_parseChunkedBytes(uint8_t *buf, size_t len) {
       // In other states we process the bytes one by one
       uint8_t data = buf[i++];
 
+      auto last_was_cr = _chunkedLastChar == '\r';
+      _chunkedLastChar = data;
+
       if (_chunkedParseState == CHUNK_LENGTH) {
         // Incrementally decode a hex number
         if (data >= '0' && data <= '9') {
@@ -410,10 +413,15 @@ bool AsyncWebServerRequest::_parseChunkedBytes(uint8_t *buf, size_t len) {
         } else if (data == ';') {
           _chunkedParseState = CHUNK_EXTENSION;
         } else if (data == '\r') {
-          // Ignore CR; wait for LF
+          // Wait for LF
         } else if (data == '\n') {
-          _chunkOffset = 0;
-          _chunkedParseState = CHUNK_DATA;
+          if (last_was_cr) {
+            _chunkOffset = 0;
+            _chunkedParseState = CHUNK_DATA;
+
+          } else {
+            _chunkedParseState = CHUNK_ERROR;
+          }
         } else {
           // Invalid hex character
           _chunkedParseState = CHUNK_ERROR;
@@ -422,23 +430,37 @@ bool AsyncWebServerRequest::_parseChunkedBytes(uint8_t *buf, size_t len) {
         // Chunk extensions appear after a semicolon.
         // We ignore them because their use cases are
         // specialized and obscure.
-        if (data == '\n') {
-          _chunkOffset = 0;
-          _chunkedParseState = CHUNK_DATA;
+        if (data == '\r') {
+          // Wait for LF
+        } else if (data == '\n') {
+          if (last_was_cr) {
+            _chunkOffset = 0;
+            _chunkedParseState = CHUNK_DATA;
+          } else {
+            _chunkedParseState = CHUNK_ERROR;
+          }
         }
       } else if (_chunkedParseState == CHUNK_END) {
-        if (data == '\n') {
-          // A zero length chunk marks the end of the chunk stream
-          if (_chunkSize == 0) {
-            // If we needed to support trailers, we would switch to
-            // TRAILER state, but since we have no use case for them,
-            // we just stop processing the body.
-            return true;
+        if (data == '\r') {
+          // Wait for LF
+        } else if (data == '\n') {
+          if (last_was_cr) {
+            // A zero length chunk marks the end of the chunk stream
+            if (_chunkSize == 0) {
+              // If we needed to support trailers, we would switch to
+              // TRAILER state, but since we have no use case for them,
+              // we just stop processing the body.
+              return true;
+            }
+            _chunkSize = 0;
+            _chunkedParseState = CHUNK_LENGTH;
+          } else {
+            _chunkedParseState = CHUNK_ERROR;
           }
-          _chunkSize = 0;
-          _chunkedParseState = CHUNK_LENGTH;
         }
-      } else if (_chunkedParseState == CHUNK_ERROR) {
+      }
+
+      if (_chunkedParseState == CHUNK_ERROR) {
         // If there was an error when parsing the chunk length, the
         // rest of the data stream is unreliable.  Ideally we should
         // close the connection, but that risks leaving things dangling
@@ -446,6 +468,7 @@ bool AsyncWebServerRequest::_parseChunkedBytes(uint8_t *buf, size_t len) {
         // the rest of the data and give handleRequest a chance to
         // clean up.
         _chunkSize = 0;
+        abort();
         return true;
       }
     }
