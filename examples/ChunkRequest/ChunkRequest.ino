@@ -179,7 +179,7 @@ void handleBody(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_
       // go out of scope
     }
     if (state && state->outFile) {
-      Serial.printf("Writing %d bytes at offset %d\n", len, index);
+      Serial.printf("Writing %zu bytes at offset %zu\n", len, index);
       auto actual = state->outFile.write(data, len);
       if (actual != len) {
         Serial.println("WebDAV write failed.  Deleting file.");
