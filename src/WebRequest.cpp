@@ -533,11 +533,24 @@ bool AsyncWebServerRequest::_parseReqHeader() {
     } else if (name.equalsIgnoreCase(T_Transfer_Encoding)) {
       String lowcase(value);
       lowcase.toLowerCase();
+      String key;
 
-      if (lowcase.indexOf("chunked") != -1) {
-        _chunkSize = 0;
-        _chunkStartIndex = 0;
-        _chunkedParseState = CHUNK_LENGTH;
+      while (lowcase.length()) {
+        auto pos = lowcase.indexOf(',');
+        if (pos >= 0) {
+          key = lowcase.substring(0, pos);
+          lowcase = lowcase.substring(pos + 1);
+        } else {
+          key = lowcase;
+          lowcase = "";
+        }
+        key.trim();
+        if (key == "chunked") {
+          _chunkSize = 0;
+          _chunkStartIndex = 0;
+          _chunkedParseState = CHUNK_LENGTH;
+          break;
+        }
       }
     }
     _headers.emplace_back(std::move(header));
