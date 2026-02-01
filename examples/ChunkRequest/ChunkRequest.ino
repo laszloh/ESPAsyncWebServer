@@ -204,12 +204,6 @@ void setup() {
   Serial.begin(115200);
 
 #if ASYNCWEBSERVER_WIFI_SUPPORTED
-#define AP_SUBNET 100
-  IPAddress local_IP(192, 168, AP_SUBNET, 1);
-  IPAddress gateway(192, 168, AP_SUBNET, 1);
-  IPAddress subnet(255, 255, 255, 0);
-  WiFi.softAPConfig(local_IP, gateway, subnet);
-
   WiFi.mode(WIFI_AP);
   WiFi.softAP("esp-captive");
 #endif
