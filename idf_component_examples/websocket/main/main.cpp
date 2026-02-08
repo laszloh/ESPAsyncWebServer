@@ -55,7 +55,6 @@ void setup() {
       String msg = "";
       if (info->final && info->index == 0 && info->len == len) {
         if (info->opcode == WS_TEXT) {
-          data[len] = 0;
           Serial.printf("ws text: %s\n", (char *)data);
         }
       }

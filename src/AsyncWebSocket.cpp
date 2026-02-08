@@ -586,7 +586,6 @@ void AsyncWebSocketClient::_onData(void *pbuf, size_t plen) {
     }
 
     const size_t datalen = std::min((size_t)(_pinfo.len - _pinfo.index), plen);
-    const auto datalast = datalen ? data[datalen] : 0;
 
     if (_pinfo.masked) {
       for (size_t i = 0; i < datalen; i++) {
@@ -606,7 +605,31 @@ void AsyncWebSocketClient::_onData(void *pbuf, size_t plen) {
       }
 
       if (datalen > 0) {
-        _server->_handleEvent(this, WS_EVT_DATA, (void *)&_pinfo, data, datalen);
+        // ------------------------------------------------------------
+        // Issue 384: https://github.com/ESP32Async/ESPAsyncWebServer/issues/384
+        // Discussion: https://github.com/ESP32Async/ESPAsyncWebServer/pull/383#discussion_r2760425739
+        // The initial design of the library was doing a backup of the byte following the data buffer because the client code
+        // was allowed and documented to do something like data[len] = 0; to facilitate null-terminated string handling.
+        // This was a bit hacky but it was working and it was documented, although completely incorrect because it was modifying a byte outside of the data buffer.
+        // So to fix this behavior and to avoid breaking existing client code that may be relying on this behavior, we now have to copy the data to a temporary buffer that has an extra byte for the null terminator.
+        // ------------------------------------------------------------
+        uint8_t *copy = (uint8_t *)malloc(datalen + 1);
+
+        if (copy == NULL) {
+          async_ws_log_e("Failed to allocate");
+          _status = WS_DISCONNECTED;
+          if (_client) {
+            _client->abort();
+          }
+          return;
+        }
+
+        memcpy(copy, data, datalen);
+        copy[datalen] = 0;
+
+        _server->_handleEvent(this, WS_EVT_DATA, (void *)&_pinfo, copy, datalen);
+
+        free(copy);
       }
 
       // track index for next fragment
@@ -652,12 +675,37 @@ void AsyncWebSocketClient::_onData(void *pbuf, size_t plen) {
 
       } else if (_pinfo.opcode < WS_DISCONNECT) {  // continuation or text/binary frame
         async_ws_log_v("WS[%" PRIu32 "]: processing data frame num=%" PRIu32 "", _clientId, _pinfo.num);
-        _server->_handleEvent(this, WS_EVT_DATA, (void *)&_pinfo, data, datalen);
+
+        // ------------------------------------------------------------
+        // Issue 384: https://github.com/ESP32Async/ESPAsyncWebServer/issues/384
+        // Discussion: https://github.com/ESP32Async/ESPAsyncWebServer/pull/383#discussion_r2760425739
+        // The initial design of the library was doing a backup of the byte following the data buffer because the client code
+        // was allowed and documented to do something like data[len] = 0; to facilitate null-terminated string handling.
+        // This was a bit hacky but it was working and it was documented, although completely incorrect because it was modifying a byte outside of the data buffer.
+        // So to fix this behavior and to avoid breaking existing client code that may be relying on this behavior, we now have to copy the data to a temporary buffer that has an extra byte for the null terminator.
+        // ------------------------------------------------------------
+        uint8_t *copy = (uint8_t *)malloc(datalen + 1);
+
+        if (copy == NULL) {
+          async_ws_log_e("Failed to allocate");
+          _status = WS_DISCONNECTED;
+          if (_client) {
+            _client->abort();
+          }
+          return;
+        }
+
+        memcpy(copy, data, datalen);
+        copy[datalen] = 0;
+
+        _server->_handleEvent(this, WS_EVT_DATA, (void *)&_pinfo, copy, datalen);
         if (_pinfo.final) {
           _pinfo.num = 0;
         } else {
           _pinfo.num += 1;
         }
+
+        free(copy);
       }
 
     } else {
@@ -672,11 +720,6 @@ void AsyncWebSocketClient::_onData(void *pbuf, size_t plen) {
       }
       _queueControl(WS_DISCONNECT, data, datalen);
       break;
-    }
-
-    // restore byte as _handleEvent may have added a null terminator i.e., data[len] = 0;
-    if (datalen) {
-      data[datalen] = datalast;
     }
 
     data += datalen;

@@ -554,9 +554,6 @@ private:
       }
     } else if (type == WS_EVT_DATA) {
       AwsFrameInfo *info = (AwsFrameInfo *)arg;
-      if (info->opcode == WS_TEXT) {
-        data[len] = 0;
-      }
       if (info->final && info->index == 0 && info->len == len) {
         if (_onMessage) {
           _onMessage(server, client, data, len);

@@ -76,9 +76,11 @@ void setup() {
   // Run in terminal 2: websocat ws://192.168.4.1/ws => should stream data
   // Run in terminal 3: websocat ws://192.168.4.1/ws => should fail:
   //
-  // To send a message to the WebSocket server:
+  // To send a message to the WebSocket server (\n at the end):
+  // > echo "Hello!" | websocat ws://192.168.4.1/ws
   //
-  // echo "Hello!" | websocat ws://192.168.4.1/ws
+  // Generates 2001 characters (\n at the end) to cause a fragmentation (over TCP MSS):
+  // > openssl rand -hex 1000 | websocat ws://192.168.4.1/ws
   //
   ws.onEvent([](AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type, void *arg, uint8_t *data, size_t len) {
     (void)len;
@@ -108,7 +110,6 @@ void setup() {
       // complete frame
       if (info->final && info->index == 0 && info->len == len) {
         if (info->opcode == WS_TEXT) {
-          data[len] = 0;
           Serial.printf("ws text: %s\n", (char *)data);
           client->ping();
         }
@@ -130,7 +131,6 @@ void setup() {
         );
 
         if (info->message_opcode == WS_TEXT) {
-          data[len] = 0;
           Serial.printf("%s\n", (char *)data);
         } else {
           for (size_t i = 0; i < len; i++) {
