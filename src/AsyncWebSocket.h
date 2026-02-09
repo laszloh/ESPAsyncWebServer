@@ -36,7 +36,7 @@
 #include <list>
 #include <memory>
 
-#ifdef ESP8266
+#if defined(ESP8266) || defined(TARGET_RP2040) || defined(TARGET_RP2350) || defined(PICO_RP2040) || defined(PICO_RP2350)
 #include <Hash.h>
 #ifdef CRYPTO_HASH_h  // include Hash.h from espressif framework if the first include was from the crypto library
 #include <../src/Hash.h>
