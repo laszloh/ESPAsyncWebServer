@@ -164,13 +164,16 @@ bool AsyncWebSocketMessageBuffer::reserve(size_t size) {
 AsyncWebSocketMessage::AsyncWebSocketMessage(AsyncWebSocketSharedBuffer buffer, uint8_t opcode, bool mask)
   : _WSbuffer{buffer}, _opcode(opcode & 0x07), _mask{mask}, _status{_WSbuffer ? WS_MSG_SENDING : WS_MSG_ERROR} {}
 
-void AsyncWebSocketMessage::ack(size_t len, uint32_t time) {
+size_t AsyncWebSocketMessage::ack(size_t len, uint32_t time) {
   (void)time;
-  _acked += len;
-  if (_sent >= _WSbuffer->size() && _acked >= _ack) {
+  const size_t pending = _ack - _acked;
+  const size_t received = std::min(len, pending);
+  _acked += received;
+  if (_sent >= _WSbuffer->size() && !pending) {
     _status = WS_MSG_SENT;
   }
-  // ets_printf("A: %u\n", len);
+  async_ws_log_v("status: %d, ack: %u/%u\n", static_cast<int>(_status), _acked, _ack);
+  return len - received;
 }
 
 size_t AsyncWebSocketMessage::send(AsyncClient *client) {
@@ -181,9 +184,7 @@ size_t AsyncWebSocketMessage::send(AsyncClient *client) {
   if (_status != WS_MSG_SENDING) {
     return 0;
   }
-  if (_acked < _ack) {
-    return 0;
-  }
+
   if (_sent == _WSbuffer->size()) {
     if (_acked == _ack) {
       _status = WS_MSG_SENT;
@@ -197,11 +198,14 @@ size_t AsyncWebSocketMessage::send(AsyncClient *client) {
   }
 
   size_t toSend = _WSbuffer->size() - _sent;
-  size_t window = webSocketSendFrameWindow(client);
+  const size_t window = webSocketSendFrameWindow(client);
 
-  if (window < toSend) {
-    toSend = window;
+  // not enough space in lwip buffer ? 
+  if (!window) {
+    return 0;
   }
+  
+  toSend = std::min(toSend, window);
 
   _sent += toSend;
   _ack += toSend + ((toSend < 126) ? 2 : 4) + (_mask * 4);
@@ -328,13 +332,19 @@ void AsyncWebSocketClient::_onAck(size_t len, uint32_t time) {
   }
 
   if (len && !_messageQueue.empty()) {
-    _messageQueue.front().ack(len, time);
+    for (auto &msg : _messageQueue) {
+      len = msg.ack(len, time);
+      if (len == 0) {
+        break;
+      }
+    }
   }
 
   _clearQueue();
 
   _runQueue();
 }
+
 
 void AsyncWebSocketClient::_onPoll() {
   if (!_client) {
@@ -362,11 +372,28 @@ void AsyncWebSocketClient::_runQueue() {
 
   _clearQueue();
 
-  if (!_controlQueue.empty() && (_messageQueue.empty() || _messageQueue.front().betweenFrames())
+  if (!_controlQueue.empty() && !_controlQueue.front().finished() && (_messageQueue.empty() || _messageQueue.front().betweenFrames())
       && webSocketSendFrameWindow(_client) > (size_t)(_controlQueue.front().len() - 1)) {
     _controlQueue.front().send(_client);
-  } else if (!_messageQueue.empty() && _messageQueue.front().betweenFrames() && webSocketSendFrameWindow(_client)) {
-    _messageQueue.front().send(_client);
+  } 
+  
+  if (webSocketSendFrameWindow(_client)) {
+    for (auto &msg : _messageQueue) {
+      if (msg._remainingBytesToSend()) {
+        msg.send(_client);
+      }
+      
+      // If we haven't finished sending this message, we must stop here to preserve WebSocket ordering.
+      // We can only pipeline subsequent messages if the current one is fully passed to TCP buffer.
+      if (msg._remainingBytesToSend()) {
+        break;
+      }
+      
+      // not enough space for another message
+      if(!webSocketSendFrameWindow(_client)) {
+        return;
+      }
+    }
   }
 }
 
