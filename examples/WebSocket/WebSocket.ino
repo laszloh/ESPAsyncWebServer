@@ -167,9 +167,13 @@ void setup() {
   server.begin();
 }
 
-static uint32_t lastWS = 0;
-static uint32_t deltaWS = 500;
+#ifdef ESP32
+static const uint32_t deltaWS = 50;
+#else
+static const uint32_t deltaWS = 200;
+#endif
 
+static uint32_t lastWS = 0;
 static uint32_t lastHeap = 0;
 
 void loop() {
@@ -185,6 +189,10 @@ void loop() {
 
     // this can be called to also set a soft limit on the number of connected clients
     ws.cleanupClients(2);  // no more than 2 clients
+
+    // ping twice (2 control frames)
+    ws.pingAll();
+    ws.pingAll();
 
 #ifdef ESP32
     Serial.printf("Free heap: %" PRIu32 "\n", ESP.getFreeHeap());

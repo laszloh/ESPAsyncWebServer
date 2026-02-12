@@ -185,7 +185,7 @@ public:
 
 class AsyncWebSocketMessage {
   friend AsyncWebSocketClient;
-  
+
 private:
   size_t _remainingBytesToSend() const {
     return _WSbuffer->size() - _sent;
@@ -208,7 +208,7 @@ public:
   bool betweenFrames() const {
     return _acked == _ack;
   }
-  
+
   size_t ack(size_t len, uint32_t time);
   size_t send(AsyncClient *client);
 };
