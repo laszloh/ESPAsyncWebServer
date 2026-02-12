@@ -372,26 +372,50 @@ void AsyncWebSocketClient::_runQueue() {
 
   _clearQueue();
 
-  if (!_controlQueue.empty() && !_controlQueue.front().finished() && (_messageQueue.empty() || _messageQueue.front().betweenFrames())
-      && webSocketSendFrameWindow(_client) > (size_t)(_controlQueue.front().len() - 1)) {
-    _controlQueue.front().send(_client);
-  }
+  size_t space = webSocketSendFrameWindow(_client);
 
-  if (webSocketSendFrameWindow(_client)) {
-    for (auto &msg : _messageQueue) {
-      if (msg._remainingBytesToSend()) {
-        msg.send(_client);
+  if (space) {
+    // control frames have priority over message frames
+    // we can send a control frame if:
+    // - there is no message frame in the queue, or the first message frame is between frames (all bytes sent are acked)
+    // - the control frame is not finished (not sent yet)
+    // - there is enough space to send the control frame (control frames are small, at most 129 bytes, so we can assume that if there is space to send it, it can be sent in one go)
+    if (_messageQueue.empty() || _messageQueue.front().betweenFrames()) {
+      for (auto &ctrl : _controlQueue) {
+        if (ctrl.finished()) {
+          continue;
+        }
+        if (space > (size_t)(ctrl.len() - 1)) {
+          async_ws_log_v("WS[%" PRIu32 "] Sending control frame: %" PRIu8 ", len: %" PRIu8, _clientId, ctrl.opcode(), ctrl.len());
+          ctrl.send(_client);
+          space = webSocketSendFrameWindow(_client);
+        }
       }
+    }
 
-      // If we haven't finished sending this message, we must stop here to preserve WebSocket ordering.
-      // We can only pipeline subsequent messages if the current one is fully passed to TCP buffer.
-      if (msg._remainingBytesToSend()) {
-        break;
-      }
+    // then we can send message frames if there is space
+    if (space) {
+      for (auto &msg : _messageQueue) {
+        if (msg._remainingBytesToSend()) {
+          async_ws_log_v(
+            "WS[%" PRIu32 "] Send message fragment: %u/%u, acked: %u/%u", _clientId, msg._remainingBytesToSend(), msg._sent + msg._remainingBytesToSend(),
+            msg._acked, msg._ack
+          );
+          // will use all the remaining space, or all the remaining bytes to send, whichever is smaller
+          msg.send(_client);
+          space = webSocketSendFrameWindow(_client);
 
-      // not enough space for another message
-      if (!webSocketSendFrameWindow(_client)) {
-        return;
+          // If we haven't finished sending this message, we must stop here to preserve WebSocket ordering.
+          // We can only pipeline subsequent messages if the current one is fully passed to TCP buffer.
+          if (msg._remainingBytesToSend()) {
+            break;
+          }
+        }
+
+        // not enough space for another message
+        if (!space) {
+          break;
+        }
       }
     }
   }
