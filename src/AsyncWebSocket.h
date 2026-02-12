@@ -184,7 +184,13 @@ public:
 };
 
 class AsyncWebSocketMessage {
+  friend AsyncWebSocketClient;
+
 private:
+  size_t _remainingBytesToSend() const {
+    return _WSbuffer->size() - _sent;
+  }
+
   AsyncWebSocketSharedBuffer _WSbuffer;
   uint8_t _opcode{WS_TEXT};
   bool _mask{false};
@@ -203,7 +209,7 @@ public:
     return _acked == _ack;
   }
 
-  void ack(size_t len, uint32_t time);
+  size_t ack(size_t len, uint32_t time);
   size_t send(AsyncClient *client);
 };
 
