@@ -171,7 +171,7 @@ size_t AsyncWebSocketMessage::ack(size_t len, uint32_t time) {
   if (_sent >= _WSbuffer->size() && _acked >= _ack) {
     _status = WS_MSG_SENT;
   }
-  async_ws_log_v("msg code: %" PRIu8 ", ack: %u/%u, remain=%u/%u, status: %d", _opcode, _acked, _ack, len - pending, len, static_cast<int>(_status));
+  async_ws_log_v("opcode: %" PRIu8 ", acked: %u/%u, left: %u/%u, status: %d", _opcode, _acked, _ack, len - pending, len, static_cast<int>(_status));
   return len - pending;
 }
 
@@ -224,7 +224,7 @@ size_t AsyncWebSocketMessage::send(AsyncClient *client) {
     _ack -= (toSend - sent);
   }
 
-  async_ws_log_v("C[%" PRIu16 "] Sent %u/%u, ack: %u/%u, final: %d", client->remotePort(), _sent, _WSbuffer->size(), _acked, _ack, final);
+  async_ws_log_v("C[%" PRIu16 "] sent: %u/%u, final: %d, acked: %u/%u", client->remotePort(), _sent, _WSbuffer->size(), final, _acked, _ack);
   return sent;
 }
 

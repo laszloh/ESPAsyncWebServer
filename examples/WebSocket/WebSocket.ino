@@ -180,15 +180,22 @@ void loop() {
   uint32_t now = millis();
 
   if (now - lastWS >= deltaWS) {
-    ws.printfAll("kp%.4f", (10.0 / 3.0));
+    ws.printfAll("kp:%.4f", (10.0 / 3.0));
     lastWS = millis();
   }
 
-  if (now - lastHeap >= 2000) {
+  if (now - lastHeap >= 5000) {
     Serial.printf("Connected clients: %u / %u total\n", ws.count(), ws.getClients().size());
 
     // this can be called to also set a soft limit on the number of connected clients
     ws.cleanupClients(2);  // no more than 2 clients
+
+    String random;
+    random.reserve(8192);
+    for (size_t i = 0; i < 8192; i++) {
+      random += "x";
+    }
+    ws.textAll(random);
 
     // ping twice (2 control frames)
     ws.pingAll();
