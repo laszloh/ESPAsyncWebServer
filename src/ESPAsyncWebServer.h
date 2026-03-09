@@ -41,8 +41,6 @@
 #include <ESPAsyncTCP.h>
 #elif defined(TARGET_RP2040) || defined(TARGET_RP2350) || defined(PICO_RP2040) || defined(PICO_RP2350)
 #include <RPAsyncTCP.h>
-#include <HTTP_Method.h>
-#include <http_parser.h>
 #else
 #error Platform not supported
 #endif
@@ -80,11 +78,10 @@ class AsyncCallbackWebHandler;
 class AsyncResponseStream;
 class AsyncMiddlewareChain;
 
-#if defined(TARGET_RP2040) || defined(TARGET_RP2350) || defined(PICO_RP2040) || defined(PICO_RP2350)
-typedef enum http_method WebRequestMethod;
-#else
-#ifndef WEBSERVER_H
-typedef enum {
+// Namespace for web request method defines
+namespace AsyncWebRequestMethod {
+// The long name here is because we sometimes include this in the global namespace
+enum AsyncWebRequestMethodType {
   HTTP_GET = 0b0000000000000001,
   HTTP_POST = 0b0000000000000010,
   HTTP_DELETE = 0b0000000000000100,
@@ -101,8 +98,25 @@ typedef enum {
   HTTP_COPY = 0b0010000000000000,
   HTTP_RESERVED = 0b0100000000000000,
   HTTP_ANY = 0b0111111111111111,
-} WebRequestMethod;
-#endif
+};
+};  // namespace AsyncWebRequestMethod
+
+typedef AsyncWebRequestMethod::AsyncWebRequestMethodType WebRequestMethod;
+typedef uint16_t WebRequestMethodComposite;
+
+// Type-safe helper functions for composite methods
+extern inline WebRequestMethodComposite operator|(WebRequestMethodComposite l, WebRequestMethod r) {
+  return l | static_cast<WebRequestMethodComposite>(r);
+};
+extern inline WebRequestMethodComposite operator|(WebRequestMethod l, WebRequestMethod r) {
+  return static_cast<WebRequestMethodComposite>(l) | r;
+};
+
+#if !defined(ASYNCWEBSERVER_NO_GLOBAL_HTTP_METHODS) && !defined(WEBSERVER_H)
+// Import the method enum values to the global namespace
+// This will collide with some <webserver.h> values on some platforms;
+// for historical reasons they are assumed to be compatible.
+using namespace AsyncWebRequestMethod;
 #endif
 
 #ifndef HAVE_FS_FILE_OPEN_MODE
@@ -122,7 +136,6 @@ public:
 #define RESPONSE_TRY_AGAIN          0xFFFFFFFF
 #define RESPONSE_STREAM_BUFFER_SIZE 1460
 
-typedef uint16_t WebRequestMethodComposite;
 typedef std::function<void(void)> ArDisconnectHandler;
 
 /*
