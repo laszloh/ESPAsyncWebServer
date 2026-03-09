@@ -3,6 +3,7 @@
 
 #include "AsyncJson.h"
 #include "AsyncWebServerLogging.h"
+using namespace AsyncWebRequestMethod;
 
 #include <utility>
 

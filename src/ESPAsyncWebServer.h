@@ -385,10 +385,10 @@ public:
   bool isExpectedRequestedConnType(RequestedConnectionType erct1, RequestedConnectionType erct2 = RCT_NOT_USED, RequestedConnectionType erct3 = RCT_NOT_USED)
     const;
   bool isWebSocketUpgrade() const {
-    return _method == HTTP_GET && isExpectedRequestedConnType(RCT_WS);
+    return _method == AsyncWebRequestMethod::HTTP_GET && isExpectedRequestedConnType(RCT_WS);
   }
   bool isSSE() const {
-    return _method == HTTP_GET && isExpectedRequestedConnType(RCT_EVENT);
+    return _method == AsyncWebRequestMethod::HTTP_GET && isExpectedRequestedConnType(RCT_EVENT);
   }
   bool isHTTP() const {
     return isExpectedRequestedConnType(RCT_DEFAULT, RCT_HTTP);
@@ -1558,7 +1558,7 @@ public:
   bool removeHandler(AsyncWebHandler *handler);
 
   AsyncCallbackWebHandler &on(AsyncURIMatcher uri, ArRequestHandlerFunction onRequest) {
-    return on(std::move(uri), HTTP_ANY, onRequest);
+    return on(std::move(uri), AsyncWebRequestMethod::HTTP_ANY, onRequest);
   }
   AsyncCallbackWebHandler &on(
     AsyncURIMatcher uri, WebRequestMethodComposite method, ArRequestHandlerFunction onRequest, ArUploadHandlerFunction onUpload = nullptr,

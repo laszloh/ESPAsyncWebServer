@@ -13,6 +13,9 @@
 
 #include "./literals.h"
 
+// Bring in HTTP namespace
+using namespace AsyncWebRequestMethod;
+
 static inline bool isParamChar(char c) {
   return ((c) && ((c) != '{') && ((c) != '[') && ((c) != '&') && ((c) != '='));
 }
