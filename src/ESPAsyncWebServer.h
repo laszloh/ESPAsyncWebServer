@@ -112,10 +112,8 @@ extern inline WebRequestMethodComposite operator|(WebRequestMethod l, WebRequest
   return static_cast<WebRequestMethodComposite>(l) | r;
 };
 
-#if !defined(ASYNCWEBSERVER_NO_GLOBAL_HTTP_METHODS) && !defined(WEBSERVER_H)
+#if !defined(ASYNCWEBSERVER_NO_GLOBAL_HTTP_METHODS)
 // Import the method enum values to the global namespace
-// This will collide with some <webserver.h> values on some platforms;
-// for historical reasons they are assumed to be compatible.
 using namespace AsyncWebRequestMethod;
 #endif
 
