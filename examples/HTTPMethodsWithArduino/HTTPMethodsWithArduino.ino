@@ -2,13 +2,16 @@
 // Copyright 2016-2026 Hristo Gochkov, Mathieu Carbou, Emil Muratov, Will Miles
 
 //
-// HTTP Method usage example and check compatibility with Arduino HTTP Methods
+// HTTP Method usage example and check compatibility with Arduino HTTP Methods when HTTP_Method.h is included.
+// ESP-IDf enums are imported, and HTTP_ANY is defined by Arduino Core.
+// In that case, we cannot use directly asyncws enums: we have to namespace them.
+// Also, asycnws HTTP_ANY is not available sine already defined by Arduino as a macro.
+// So we have to use AsyncWebRequestMethod::HTTP_ALL instead of HTTP_ANY in that case.
 //
 
 #include <Arduino.h>
 
 #if !defined(ESP8266)
-// simulate asyncws project being used with another library using Arduino HTTP Methods
 #include <HTTP_Method.h>
 #endif
 
@@ -42,6 +45,31 @@ static void handlePostTest(AsyncWebServerRequest *req, JsonVariant &json) {
 }
 #endif
 
+// user defined functions that turns out to have similar signatures to the ones in global header
+int stringToMethod(const String &) {
+  return 0;
+}
+const char *methodToString(WebRequestMethod) {
+  return "METHOD";
+}
+bool methodMatches(WebRequestMethodComposite c, WebRequestMethod m) {
+  return false;
+};
+
+static WebRequestMethodComposite allowed = AsyncWebRequestMethod::HTTP_HEAD | AsyncWebRequestMethod::HTTP_OPTIONS;
+
+class MyRequestHandler : public AsyncWebHandler {
+public:
+  bool canHandle(__unused AsyncWebServerRequest *request) const override {
+    // Test backward compatibility with previous way of checking if a method is allowed in a composite using a bit operator
+    return allowed & request->method();
+  }
+
+  void handleRequest(AsyncWebServerRequest *request) override {
+    request->send(200, "text/plain", "Hello from custom handler");
+  }
+};
+
 void setup() {
   Serial.begin(115200);
 
@@ -56,8 +84,8 @@ void setup() {
     request->send(200, "text/plain", "Hello");
   });
 
-  // curl -v http://192.168.4.1/any
-  server.on("/any", WebRequestMethod::HTTP_ANY, [](AsyncWebServerRequest *request) {
+  // curl -v http://192.168.4.1/all
+  server.on("/all", AsyncWebRequestMethod::HTTP_ALL, [](AsyncWebServerRequest *request) {
     request->send(200, "text/plain", "Hello");
   });
 
@@ -67,6 +95,11 @@ void setup() {
   AsyncCallbackJsonWebHandler *testHandler = new AsyncCallbackJsonWebHandler("/test", handlePostTest);
   server.addHandler(testHandler);
 #endif
+
+  // curl -v -X HEAD http://192.168.4.1/custom => answers
+  // curl -v -X OPTIONS http://192.168.4.1/custom => answers
+  // curl -v -X POST http://192.168.4.1/custom => no answer
+  server.addHandler(new MyRequestHandler());
 
   server.begin();
 }
