@@ -105,10 +105,10 @@ typedef AsyncWebRequestMethod::AsyncWebRequestMethodType WebRequestMethod;
 typedef uint16_t WebRequestMethodComposite;
 
 // Type-safe helper functions for composite methods
-extern inline WebRequestMethodComposite operator|(WebRequestMethodComposite l, WebRequestMethod r) {
+extern constexpr inline WebRequestMethodComposite operator|(WebRequestMethodComposite l, WebRequestMethod r) {
   return l | static_cast<WebRequestMethodComposite>(r);
 };
-extern inline WebRequestMethodComposite operator|(WebRequestMethod l, WebRequestMethod r) {
+extern constexpr inline WebRequestMethodComposite operator|(WebRequestMethod l, WebRequestMethod r) {
   return static_cast<WebRequestMethodComposite>(l) | r;
 };
 
