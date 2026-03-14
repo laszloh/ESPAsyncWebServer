@@ -29,6 +29,19 @@
 
 static AsyncWebServer server(80);
 
+#if ASYNC_JSON_SUPPORT == 1
+// https://github.com/ESP32Async/ESPAsyncWebServer/issues/404
+static void handlePostTest(AsyncWebServerRequest *req, JsonVariant &json) {
+  AsyncWebServerResponse *response;
+  if (req->method() == WebRequestMethod::HTTP_POST) {
+    response = req->beginResponse(200, "application/json", "{\"msg\": \"OK\"}");
+  } else {
+    response = req->beginResponse(501, "application/json", "{\"msg\": \"Not Implemented\"}");
+  }
+  req->send(response);
+}
+#endif
+
 void setup() {
   Serial.begin(115200);
 
@@ -47,6 +60,13 @@ void setup() {
   server.on("/any", WebRequestMethod::HTTP_ANY, [](AsyncWebServerRequest *request) {
     request->send(200, "text/plain", "Hello");
   });
+
+#if ASYNC_JSON_SUPPORT == 1
+  // curl -v http://192.168.4.1/test => Not Implemented
+  // curl -v -X POST -H 'Content-Type: application/json' -d '{"name":"You"}' http://192.168.4.1/test => OK
+  AsyncCallbackJsonWebHandler *testHandler = new AsyncCallbackJsonWebHandler("/test", handlePostTest);
+  server.addHandler(testHandler);
+#endif
 
   server.begin();
 }
