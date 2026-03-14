@@ -112,15 +112,17 @@ size_t AsyncMessagePackResponse::_fillBuffer(uint8_t *data, size_t len) {
 #endif
 
 // Body handler supporting both content types: JSON and MessagePack
-constexpr static bool JsonHandlerMethods =
-  AsyncWebRequestMethod::HTTP_GET | AsyncWebRequestMethod::HTTP_POST | AsyncWebRequestMethod::HTTP_PUT | AsyncWebRequestMethod::HTTP_PATCH;
 
 #if ARDUINOJSON_VERSION_MAJOR == 6
 AsyncCallbackJsonWebHandler::AsyncCallbackJsonWebHandler(AsyncURIMatcher uri, ArJsonRequestHandlerFunction onRequest, size_t maxJsonBufferSize)
-  : _uri(std::move(uri)), _method(JsonHandlerTypes), _onRequest(onRequest), maxJsonBufferSize(maxJsonBufferSize), _maxContentLength(16384) {}
+  : _uri(std::move(uri)),
+    _method(AsyncWebRequestMethod::HTTP_GET | AsyncWebRequestMethod::HTTP_POST | AsyncWebRequestMethod::HTTP_PUT | AsyncWebRequestMethod::HTTP_PATCH),
+    _onRequest(onRequest), maxJsonBufferSize(maxJsonBufferSize), _maxContentLength(16384) {}
 #else
 AsyncCallbackJsonWebHandler::AsyncCallbackJsonWebHandler(AsyncURIMatcher uri, ArJsonRequestHandlerFunction onRequest)
-  : _uri(std::move(uri)), _method(JsonHandlerMethods), _onRequest(onRequest), _maxContentLength(16384) {}
+  : _uri(std::move(uri)),
+    _method(AsyncWebRequestMethod::HTTP_GET | AsyncWebRequestMethod::HTTP_POST | AsyncWebRequestMethod::HTTP_PUT | AsyncWebRequestMethod::HTTP_PATCH),
+    _onRequest(onRequest), _maxContentLength(16384) {}
 #endif
 
 bool AsyncCallbackJsonWebHandler::canHandle(AsyncWebServerRequest *request) const {
