@@ -158,13 +158,17 @@ public:
   constexpr WebRequestMethodComposite(WebRequestMethod m) : mask(static_cast<uint32_t>(m)){};
 
   // Combine composites
-  constexpr inline WebRequestMethodComposite operator|(WebRequestMethodComposite r) const {
+  constexpr inline WebRequestMethodComposite operator|(const WebRequestMethodComposite &r) const {
     return WebRequestMethodComposite(mask | r.mask);
   };
 
   // == operator for composite
-  constexpr inline bool operator==(WebRequestMethodComposite r) const {
+  constexpr inline bool operator==(const WebRequestMethodComposite &r) const {
     return mask == r.mask;
+  };
+
+  constexpr inline bool operator!=(const WebRequestMethodComposite &r) const {
+    return mask != r.mask;
   };
 
   // Check for a match
