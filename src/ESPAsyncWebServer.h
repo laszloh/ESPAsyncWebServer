@@ -154,6 +154,9 @@ private:
   constexpr WebRequestMethodComposite(uint32_t m) : mask(m){};
 
 public:
+  // Default constructor: by default, matches nothing
+  constexpr WebRequestMethodComposite() : mask(0){};
+
   // Constructor: allows implicit conversion from WebRequestMethod
   constexpr WebRequestMethodComposite(WebRequestMethod m) : mask(static_cast<uint32_t>(m)){};
 
