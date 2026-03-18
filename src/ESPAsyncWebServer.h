@@ -162,6 +162,11 @@ public:
     return WebRequestMethodComposite(mask | r.mask);
   };
 
+  // == operator for composite
+  constexpr inline bool operator==(WebRequestMethodComposite r) const {
+    return mask == r.mask;
+  };
+
   // Check for a match
   constexpr inline bool matches(WebRequestMethod m) const {
     return mask & static_cast<uint32_t>(m);

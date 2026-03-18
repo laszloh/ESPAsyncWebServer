@@ -26,8 +26,6 @@
 #include <WiFi.h>
 #endif
 
-#define ASYNCWEBSERVER_NO_GLOBAL_HTTP_METHODS 1
-#undef HTTP_ANY
 #include <ESPAsyncWebServer.h>
 
 static AsyncWebServer server(80);
@@ -80,7 +78,7 @@ void setup() {
 
   // curl -v http://192.168.4.1/get-or-post
   // curl -v -X POST -d "a=b" http://192.168.4.1/get-or-post
-  server.on("/get-or-post", WebRequestMethod::HTTP_GET | WebRequestMethod::HTTP_POST, [](AsyncWebServerRequest *request) {
+  server.on("/get-or-post", AsyncWebRequestMethod::HTTP_GET | AsyncWebRequestMethod::HTTP_POST, [](AsyncWebServerRequest *request) {
     request->send(200, "text/plain", "Hello");
   });
 
@@ -102,6 +100,22 @@ void setup() {
   server.addHandler(new MyRequestHandler());
 
   server.begin();
+
+  WebRequestMethodComposite composite1 = WebRequestMethod::HTTP_GET | WebRequestMethod::HTTP_POST;
+  WebRequestMethodComposite composite2 = WebRequestMethod::HTTP_GET | WebRequestMethod::HTTP_POST;
+  WebRequestMethodComposite composite3 = WebRequestMethod::HTTP_HEAD | WebRequestMethod::HTTP_OPTIONS;
+  WebRequestMethodComposite composite4 = composite3;
+  WebRequestMethodComposite composite5 = WebRequestMethod::HTTP_GET;
+
+  assert(composite1.matches(WebRequestMethod::HTTP_GET));
+  assert(composite1.matches(WebRequestMethod::HTTP_POST));
+  assert(!composite1.matches(WebRequestMethod::HTTP_HEAD));
+  assert(!composite3.matches(WebRequestMethod::HTTP_GET));
+
+  assert(composite1 == composite2);
+  assert(composite3 == composite4);
+  assert(composite1 != composite3);
+  assert(composite5 == AsyncWebRequestMethod::HTTP_GET);
 }
 
 // not needed

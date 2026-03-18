@@ -86,7 +86,6 @@ void setup() {
     request->send(200, "text/plain", "Hello");
   });
 
-  // will show a deprecation warning
   server.on("/any", AsyncWebRequestMethod::HTTP_ANY, [](AsyncWebServerRequest *request) {
     request->send(200, "text/plain", "Hello");
   });
@@ -104,6 +103,22 @@ void setup() {
   server.addHandler(new MyRequestHandler());
 
   server.begin();
+
+  WebRequestMethodComposite composite1 = WebRequestMethod::HTTP_GET | WebRequestMethod::HTTP_POST;
+  WebRequestMethodComposite composite2 = WebRequestMethod::HTTP_GET | WebRequestMethod::HTTP_POST;
+  WebRequestMethodComposite composite3 = WebRequestMethod::HTTP_HEAD | WebRequestMethod::HTTP_OPTIONS;
+  WebRequestMethodComposite composite4 = composite3;
+  WebRequestMethodComposite composite5 = WebRequestMethod::HTTP_GET;
+
+  assert(composite1.matches(WebRequestMethod::HTTP_GET));
+  assert(composite1.matches(WebRequestMethod::HTTP_POST));
+  assert(!composite1.matches(WebRequestMethod::HTTP_HEAD));
+  assert(!composite3.matches(WebRequestMethod::HTTP_GET));
+
+  assert(composite1 == composite2);
+  assert(composite3 == composite4);
+  assert(composite1 != composite3);
+  assert(composite5 == AsyncWebRequestMethod::HTTP_GET);
 }
 
 // not needed
