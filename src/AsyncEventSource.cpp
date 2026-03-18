@@ -368,13 +368,16 @@ void AsyncEventSource::_addClient(AsyncEventSourceClient *client) {
   if (!client) {
     return;
   }
-#ifdef ESP32
-  std::lock_guard<std::recursive_mutex> lock(_client_queue_lock);
-#endif
-  _clients.emplace_back(client);
+
   if (_connectcb) {
     _connectcb(client);
   }
+
+#ifdef ESP32
+  std::lock_guard<std::recursive_mutex> lock(_client_queue_lock);
+#endif
+
+  _clients.emplace_back(client);
 
   _adjust_inflight_window();
 }
