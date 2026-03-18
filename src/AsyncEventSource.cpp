@@ -380,12 +380,12 @@ void AsyncEventSource::_addClient(AsyncEventSourceClient *client) {
 }
 
 void AsyncEventSource::_handleDisconnect(AsyncEventSourceClient *client) {
-#ifdef ESP32
-  std::lock_guard<std::recursive_mutex> lock(_client_queue_lock);
-#endif
   if (_disconnectcb) {
     _disconnectcb(client);
   }
+#ifdef ESP32
+  std::lock_guard<std::recursive_mutex> lock(_client_queue_lock);
+#endif
   for (auto i = _clients.begin(); i != _clients.end(); ++i) {
     if (i->get() == client) {
       _clients.erase(i);
