@@ -7,6 +7,7 @@
 #include <time.h>
 
 #include <string>
+#include <utility>
 
 class AsyncStaticWebHandler : public AsyncWebHandler {
   using File = fs::File;
@@ -65,7 +66,7 @@ public:
   AsyncCallbackWebHandler() : _uri(), _method(AsyncWebRequestMethod::HTTP_ALL), _onRequest(NULL), _onUpload(NULL), _onBody(NULL), _isRegex(false) {}
   void setUri(AsyncURIMatcher uri);
   void setMethod(WebRequestMethodComposite method) {
-    _method = method;
+    _method = std::move(method);
   }
   void onRequest(ArRequestHandlerFunction fn) {
     _onRequest = fn;

@@ -104,16 +104,16 @@ void setup() {
 
   server.begin();
 
-  WebRequestMethodComposite composite1 = WebRequestMethod::HTTP_GET | WebRequestMethod::HTTP_POST;
-  WebRequestMethodComposite composite2 = WebRequestMethod::HTTP_GET | WebRequestMethod::HTTP_POST;
-  WebRequestMethodComposite composite3 = WebRequestMethod::HTTP_HEAD | WebRequestMethod::HTTP_OPTIONS;
+  WebRequestMethodComposite composite1 = AsyncWebRequestMethod::HTTP_GET | AsyncWebRequestMethod::HTTP_POST;
+  WebRequestMethodComposite composite2 = AsyncWebRequestMethod::HTTP_GET | AsyncWebRequestMethod::HTTP_POST;
+  WebRequestMethodComposite composite3 = AsyncWebRequestMethod::HTTP_HEAD | AsyncWebRequestMethod::HTTP_OPTIONS;
   WebRequestMethodComposite composite4 = composite3;
-  WebRequestMethodComposite composite5 = WebRequestMethod::HTTP_GET;
+  WebRequestMethodComposite composite5 = AsyncWebRequestMethod::HTTP_GET;
 
-  assert(composite1.matches(WebRequestMethod::HTTP_GET));
-  assert(composite1.matches(WebRequestMethod::HTTP_POST));
-  assert(!composite1.matches(WebRequestMethod::HTTP_HEAD));
-  assert(!composite3.matches(WebRequestMethod::HTTP_GET));
+  assert(composite1.matches(AsyncWebRequestMethod::HTTP_GET));
+  assert(composite1.matches(AsyncWebRequestMethod::HTTP_POST));
+  assert(!composite1.matches(AsyncWebRequestMethod::HTTP_HEAD));
+  assert(!composite3.matches(AsyncWebRequestMethod::HTTP_GET));
 
   assert(composite1 == composite2);
   assert(composite3 == composite4);
