@@ -83,7 +83,7 @@ void loop() {
     Serial.setTimeout(10000);
     String response = Serial.readStringUntil('\n');  // waits for a key to be pressed
     Serial.println();
-    message = emptyString;
+    message = asyncsrv::emptyString;
     if (auto request = serialRequest.lock()) {
       request->send(200, "text/plain", "Answer: " + response);
     }
