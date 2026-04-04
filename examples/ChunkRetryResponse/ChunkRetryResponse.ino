@@ -177,7 +177,7 @@ void setup() {
         memcpy(buffer, answer.c_str(), answer.length());
 
         // finish!
-        triggerUART = emptyString;
+        triggerUART = asyncsrv::emptyString;
         key = -1;
 
         return answer.length();
@@ -218,6 +218,6 @@ void loop() {
     key = Serial.read();
     Serial.flush();
     // async_ws_log_d("UART input: %c", key);
-    triggerUART = emptyString;
+    triggerUART = asyncsrv::emptyString;
   }
 }

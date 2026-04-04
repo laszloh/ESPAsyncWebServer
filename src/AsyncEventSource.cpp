@@ -27,7 +27,7 @@ static String generateEventMessage(const char *message, const char *event, uint3
 
   if (!str.reserve(len)) {
     async_ws_log_e("Failed to allocate");
-    return emptyString;
+    return asyncsrv::emptyString;
   }
 
   if (reconnect) {

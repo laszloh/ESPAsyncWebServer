@@ -84,7 +84,7 @@ void setup() {
     if (var == "USER") {
       return String("Bob ") + millis();
     }
-    return emptyString;
+    return asyncsrv::emptyString;
   });
 
   // Serve a static template with a template processor
@@ -100,7 +100,7 @@ void setup() {
       if (var == "USER") {
         return "Bob";
       }
-      return emptyString;
+      return asyncsrv::emptyString;
     })
     .setLastModified("Sun, 28 Sep 2025 01:02:03 GMT");
 
@@ -115,7 +115,7 @@ void setup() {
     if (var == "USER") {
       return String("Bob ") + uptimeInMinutes + " minutes";
     }
-    return emptyString;
+    return asyncsrv::emptyString;
   });
 
   // Serve a template with dynamic content based on user request
@@ -132,7 +132,7 @@ void setup() {
           return param->value();
         }
       }
-      return emptyString;
+      return asyncsrv::emptyString;
     });
   });
 
